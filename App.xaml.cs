@@ -85,7 +85,7 @@ namespace HuntMapOverlay
                     rootFrame.Navigate(typeof(MainPage), xboxGameBarWidget);
                     //xboxGameBarWidget.CenterWindowAsync();
                     var bounds = Window.Current.Bounds;
-                    if (xboxGameBarWidget.WindowBounds.Top == 32 && xboxGameBarWidget.WindowBounds.Left == 0)
+                    if (xboxGameBarWidget.WindowBounds.Top == 0 && xboxGameBarWidget.WindowBounds.Left == 0)
                     {
                         var height = bounds.Height - 100;
                         xboxGameBarWidget.TryResizeWindowAsync(new Size(bounds.Width - 5, height));

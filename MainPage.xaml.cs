@@ -38,7 +38,7 @@ namespace HuntMapOverlay
         public MainPage()
         {
             this.InitializeComponent();
-            SetupSignalR();
+            
 
             //gameBarWidget.Activated += GameBarWidget_Activated;
         }
@@ -46,16 +46,52 @@ namespace HuntMapOverlay
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
-
-            // Cast the navigation parameter to XboxGameBarWidget.
             widget = e.Parameter as XboxGameBarWidget;
 
             if (widget != null)
             {
-                // Register an event handler for when the widget size changes.
-                widget.WindowBoundsChanged += Widget_WindowSizeChanged;
+                widget.CloseRequested += Widget_Closed;
+                SetupSignalR();
+            }
+        }
+
+        private async void Widget_Closed(XboxGameBarWidget sender, object args)
+        {
+            // Ensure all resources are properly disposed when the widget is closed
+            if (hubConnection != null)
+            {
+                if (hubConnection.State == HubConnectionState.Connected)
+                {
+                    await hubConnection.StopAsync();
+                }
+                hubConnection.Remove("ReceiveLine");
+                hubConnection.Remove("ReceiveDeleteLine");
+                await hubConnection.DisposeAsync();
                 
-                
+            }
+
+            // Detach event handlers
+            widget.CloseRequested -= Widget_Closed;
+        }
+
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+
+            if (widget != null)
+            {
+                widget.WindowBoundsChanged -= Widget_WindowSizeChanged; // Detach event handler
+                widget = null; // Clear reference
+            }
+
+            if (hubConnection != null)
+            {
+                if (hubConnection.State == HubConnectionState.Connected)
+                {
+                    hubConnection.StopAsync(); // Stop connection
+                }
+                hubConnection.DisposeAsync(); // Dispose object
+                hubConnection = null; // Clear reference
             }
         }
         private async void SetupSignalR()
@@ -101,7 +137,7 @@ namespace HuntMapOverlay
                 Debug.WriteLine("Connection started");
 
                 // Attempt to join a room
-                int roomTier = await JoinRoom("Q3UCG");  // Replace "YD8UN" with your desired room ID
+                int roomTier = await JoinRoom("JQT2P");  // Replace "YD8UN" with your desired room ID
                 Debug.WriteLine($"Joined Room with Tier: {roomTier}");
             }
             catch (Exception ex)
@@ -163,12 +199,12 @@ namespace HuntMapOverlay
         }
         private Line DrawLine(Point start, Point end)
         {
-            double startX = end.Lng + (widget.WindowBounds.Width * 0.317578125);
-            double startY = mapCanvas.ActualHeight - end.Lat;
-            double endX = start.Lng + (widget.WindowBounds.Width * 0.317578125);
-            double endY = mapCanvas.ActualHeight - start.Lat;
+            double startX = (end.Lng * (widget.WindowBounds.Width * .3645833333333333 / 1000))  + (widget.WindowBounds.Width * 0.317578125);
+            double startY = mapCanvas.ActualHeight - (end.Lat * (widget.WindowBounds.Width * .3645833333333333 / 1000)) - (((widget.WindowBounds.Height + 100) * .171296) - 100);
+            double endX = (start.Lng * (widget.WindowBounds.Width * .3645833333333333 / 1000)) + (widget.WindowBounds.Width * 0.317578125);
+            double endY = mapCanvas.ActualHeight - (start.Lat * (widget.WindowBounds.Width * .3645833333333333 / 1000)) - (((widget.WindowBounds.Height + 100) * .171296) - 100);
 
-            Line line = new Line
+            var line = new Line
             {
                 X1 = startX,
                 Y1 = startY,
@@ -177,7 +213,6 @@ namespace HuntMapOverlay
                 Stroke = new SolidColorBrush(Windows.UI.Colors.Red),
                 StrokeThickness = 2
             };
-            
             mapCanvas.Children.Add(line);
             return line;
         }
