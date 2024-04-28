@@ -1,0 +1,1 @@
+C:\git\HuntMapOverlay\HuntMapOverlay.csproj;x86
