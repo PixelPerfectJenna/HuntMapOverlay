@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Gaming.XboxGameBar;
+using Microsoft.Gaming.XboxGameBar.Input;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,7 @@ using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 using Windows.Media.Protection.PlayReady;
+using Windows.System;
 using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -34,26 +36,42 @@ namespace HuntMapOverlay
         private XboxGameBarWidget widget = null;
         private HubConnection hubConnection;
         private List<ScreenLine> ScreenLines = new List<ScreenLine>();
+        private XboxGameBarHotkeyWatcher hotkeyWatcher = null;
+        public bool mapVisable = false;
 
         public MainPage()
         {
             this.InitializeComponent();
-            
-
-            //gameBarWidget.Activated += GameBarWidget_Activated;
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
             widget = e.Parameter as XboxGameBarWidget;
-
+                
             if (widget != null)
             {
+                List<VirtualKey> virtualKeys = new List<VirtualKey> { VirtualKey.Tab };
+                hotkeyWatcher = XboxGameBarHotkeyWatcher.CreateWatcher(widget, virtualKeys);
+                hotkeyWatcher.HotkeySetStateChanged += HotkeyWatcher_HotkeySetStateChanged;
+                hotkeyWatcher.Start();
                 widget.CloseRequested += Widget_Closed;
                 SetupSignalR();
             }
         }
+
+        private async void HotkeyWatcher_HotkeySetStateChanged(XboxGameBarHotkeyWatcher sender, HotkeySetStateChangedArgs args)
+        {
+            if (args.HotkeySetDown)
+            {
+                // Run the UI update code on the UI thread
+                    await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+                {
+                    mapCanvas.Visibility = mapCanvas.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+                });
+            }
+        }
+
 
         private async void Widget_Closed(XboxGameBarWidget sender, object args)
         {
@@ -72,6 +90,8 @@ namespace HuntMapOverlay
 
             // Detach event handlers
             widget.CloseRequested -= Widget_Closed;
+            hotkeyWatcher.HotkeySetStateChanged -= HotkeyWatcher_HotkeySetStateChanged;
+            hotkeyWatcher = null;
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -128,7 +148,7 @@ namespace HuntMapOverlay
                 Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
                 {
                     EarseLine(id);
-                });
+                });                                             
             });
 
             try
@@ -137,7 +157,7 @@ namespace HuntMapOverlay
                 Debug.WriteLine("Connection started");
 
                 // Attempt to join a room
-                int roomTier = await JoinRoom("JQT2P");  // Replace "YD8UN" with your desired room ID
+                int roomTier = await JoinRoom("ZGKUM");  // Replace "YD8UN" with your desired room ID
                 Debug.WriteLine($"Joined Room with Tier: {roomTier}");
             }
             catch (Exception ex)
